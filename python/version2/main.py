@@ -105,7 +105,7 @@ root.mainloop()
 
 
 
-# you can use it just for refrence more links:
+# you can use it just for References more links:
 
 # https://www.python.org/
 # https://www.wikipedia.org/
