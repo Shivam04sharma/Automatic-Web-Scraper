@@ -1,0 +1,95 @@
+import 'dart:async';
+import 'dart:math';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+
+final stockProvider = StateNotifierProvider<StockNotifier, Map<String, double>>(
+  (ref) => StockNotifier(),
+);
+
+class StockNotifier extends StateNotifier<Map<String, double>> {
+  final _random = Random();
+  Timer? _timer;
+
+  StockNotifier() : super({}) {
+    // 50 stocks
+    for (int i = 0; i < 50; i++) {
+      state = {...state, "STOCK$i": 100 + _random.nextDouble() * 50};
+    }
+    // Simulate WebSocket price updates every 500ms
+    _timer = Timer.periodic(Duration(milliseconds: 500), (_) {
+      final index = _random.nextInt(50);
+      final stockKey = "STOCK$index";
+      final newPrice = 100 + _random.nextDouble() * 50;
+      state = {...state, stockKey: newPrice};
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+}
+
+void main() {
+  runApp(ProviderScope(child: MyApp()));
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Real-Time Trading App',
+      home: Scaffold(
+        appBar: AppBar(title: Text("Live Stock Prices")),
+        body: StockList(),
+      ),
+    );
+  }
+}
+
+class StockList extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final stockData = ref.watch(stockProvider);
+
+    return ListView.builder(
+      itemCount: stockData.length,
+      itemBuilder: (context, index) {
+        final key = stockData.keys.elementAt(index);
+        return ProviderScope(
+          overrides: [
+            singleStockProvider.overrideWithValue(
+              StockRowData(key, stockData[key]!),
+            )
+          ],
+          child: StockRow(),
+        );
+      },
+    );
+  }
+}
+
+/// data holderforone stock row
+class StockRowData {
+  final String symbol;
+  final double price;
+  StockRowData(this.symbol, this.price);
+}
+
+final singleStockProvider = Provider<StockRowData>((ref) {
+  throw UnimplementedError();
+});
+
+class StockRow extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final stock = ref.watch(singleStockProvider);
+    return ListTile(
+      title: Text(stock.symbol),
+      trailing: Text(stock.price.toStringAsFixed(2)),
+    );
+  }
+}
